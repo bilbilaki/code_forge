@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-class CustomViewport extends TwoDimensionalViewport{
+class CustomViewport extends TwoDimensionalViewport {
   const CustomViewport({
     super.key,
     required super.verticalOffset,
@@ -10,7 +10,7 @@ class CustomViewport extends TwoDimensionalViewport{
     required super.horizontalOffset,
     required super.horizontalAxisDirection,
     required TwoDimensionalChildBuilderDelegate super.delegate,
-    required super.mainAxis
+    required super.mainAxis,
   });
 
   @override
@@ -22,13 +22,16 @@ class CustomViewport extends TwoDimensionalViewport{
       verticalAxisDirection: verticalAxisDirection,
       delegate: delegate,
       mainAxis: mainAxis,
-      childManager: context as TwoDimensionalChildManager
+      childManager: context as TwoDimensionalChildManager,
     );
   }
 
   @override
-  void updateRenderObject(BuildContext context, covariant RenderTwoDimensionalViewport renderObject) {
-    renderObject   
+  void updateRenderObject(
+    BuildContext context,
+    covariant RenderTwoDimensionalViewport renderObject,
+  ) {
+    renderObject
       ..horizontalOffset = horizontalOffset
       ..horizontalAxisDirection = horizontalAxisDirection
       ..verticalOffset = verticalOffset
@@ -36,10 +39,9 @@ class CustomViewport extends TwoDimensionalViewport{
       ..delegate = delegate
       ..mainAxis = mainAxis;
   }
-  
 }
 
-class Render2DCodeField extends RenderTwoDimensionalViewport{
+class Render2DCodeField extends RenderTwoDimensionalViewport {
   Render2DCodeField({
     required super.horizontalOffset,
     required super.horizontalAxisDirection,
@@ -47,14 +49,14 @@ class Render2DCodeField extends RenderTwoDimensionalViewport{
     required super.verticalAxisDirection,
     required super.delegate,
     required super.mainAxis,
-    required super.childManager
+    required super.childManager,
   });
 
   @override
   void layoutChildSequence() {
     final child = buildOrObtainChildFor(ChildVicinity(xIndex: 0, yIndex: 0));
 
-    if(child != null){
+    if (child != null) {
       child.layout(
         BoxConstraints(
           minHeight: 0,
@@ -62,8 +64,8 @@ class Render2DCodeField extends RenderTwoDimensionalViewport{
           maxWidth: double.infinity,
           maxHeight: double.infinity,
         ),
-        
-        parentUsesSize: true
+
+        parentUsesSize: true,
       );
       parentDataOf(child).layoutOffset = Offset.zero;
 
@@ -77,5 +79,4 @@ class Render2DCodeField extends RenderTwoDimensionalViewport{
       );
     }
   }
-
 }

@@ -21,7 +21,7 @@ class _MyAppState extends State<MyApp> {
   final _controller = CodeForgeController();
 
   @override
-  void initState(){
+  void initState() {
     _controller.text = little_code;
     super.initState();
   }
@@ -33,6 +33,7 @@ class _MyAppState extends State<MyApp> {
         child: CodeForge(
           filePath: "/home/athul/Projects/EhEh/sample.py",
           controller: _controller,
+          lineWrap: true,
           /* textStyle: const TextStyle(
             fontFamily: 'monospace',
             fontSize: 14,
@@ -46,10 +47,7 @@ class _MyAppState extends State<MyApp> {
           ),
           gutterStyle: GutterStyle(
             backgroundColor: Color(0xFF252526),
-            lineNumberStyle: TextStyle(
-              color: Color(0xFF858585),
-              fontSize: 12,
-            ),
+            lineNumberStyle: TextStyle(color: Color(0xFF858585), fontSize: 12),
             foldedIconColor: Color(0xFFD4D4D4),
             unfoldedIconColor: Color(0xFF858585),
           ),
@@ -58,7 +56,7 @@ class _MyAppState extends State<MyApp> {
             //TODO
             selectionColor: const Color(0xFF264F78).withOpacity(0.5),
           ),
-        )
+        ),
       ),
     );
   }

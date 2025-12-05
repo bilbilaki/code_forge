@@ -34,7 +34,7 @@ sealed class LspConfig {
       StreamController.broadcast();
   int _nextId = 1;
   final _openDocuments = <String, int>{};
-  
+
   /// Stream of responses from the LSP server.
   /// Use this to listen for notifications like diagnostics.
   Stream<Map<String, dynamic>> get responses => _responseController.stream;
@@ -132,7 +132,7 @@ sealed class LspConfig {
 
   Future<void> updateDocument(String content) async {
     if (!_openDocuments.containsKey(filePath)) {
-      return;  // Apply language-specific overrides
+      return; // Apply language-specific overrides
     }
 
     final version = _openDocuments[filePath]! + 1;

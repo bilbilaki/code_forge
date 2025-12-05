@@ -88,7 +88,10 @@ class Rope {
   _RopeNode? _tryInsertInLeaf(_RopeNode node, int position, String char) {
     if (node is _RopeLeaf) {
       if (node.text.length < _leafSize) {
-        final newText = node.text.substring(0, position) + char + node.text.substring(position);
+        final newText =
+            node.text.substring(0, position) +
+            char +
+            node.text.substring(position);
         return _RopeLeaf(newText);
       }
       return null;
@@ -135,7 +138,9 @@ class Rope {
   _RopeNode? _tryDeleteInLeaf(_RopeNode node, int position) {
     if (node is _RopeLeaf) {
       if (position >= 0 && position < node.text.length) {
-        final newText = node.text.substring(0, position) + node.text.substring(position + 1);
+        final newText =
+            node.text.substring(0, position) +
+            node.text.substring(position + 1);
         return newText.isEmpty ? _RopeLeaf('') : _RopeLeaf(newText);
       }
       return null;
@@ -261,10 +266,7 @@ class Rope {
         return _SplitPair(node, null);
       } else if (index < leftLen) {
         final leftSplit = _split(node.left, index);
-        return _SplitPair(
-          leftSplit.left,
-          _concat(leftSplit.right, node.right),
-        );
+        return _SplitPair(leftSplit.left, _concat(leftSplit.right, node.right));
       } else if (index == leftLen) {
         return _SplitPair(node.left, node.right);
       } else {
@@ -283,7 +285,9 @@ class Rope {
     if (a == null) return b;
     if (b == null) return a;
 
-    if (a is _RopeLeaf && b is _RopeLeaf && a.text.length + b.text.length <= _leafSize) {
+    if (a is _RopeLeaf &&
+        b is _RopeLeaf &&
+        a.text.length + b.text.length <= _leafSize) {
       return _RopeLeaf(a.text + b.text);
     }
 
@@ -369,7 +373,11 @@ class Rope {
       if (offset < left.length) {
         return _getLineAtOffset(left, offset, baseLine);
       } else {
-        return _getLineAtOffset(node.right, offset - left.length, baseLine + left.newlines);
+        return _getLineAtOffset(
+          node.right,
+          offset - left.length,
+          baseLine + left.newlines,
+        );
       }
     } else {
       throw StateError('Unknown node type');
@@ -530,9 +538,9 @@ class _RopeConcat extends _RopeNode {
   final int _newlines;
 
   _RopeConcat(this.left, this.right)
-      : _length = left.length + right.length,
-        _height = 1 + max(left.height, right.height),
-        _newlines = left.newlines + right.newlines;
+    : _length = left.length + right.length,
+      _height = 1 + max(left.height, right.height),
+      _newlines = left.newlines + right.newlines;
 
   @override
   int get length => _length;

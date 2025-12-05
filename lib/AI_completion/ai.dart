@@ -159,8 +159,9 @@ class Gemini extends Models {
   @override
   String responseParser(dynamic response) {
     try {
-      if(response == null) return "AI completion is not available";
-      return response["candidates"]?[0]?["content"]?["parts"]?[0]?["text"] ?? "AI completion is not available";
+      if (response == null) return "AI completion is not available";
+      return response["candidates"]?[0]?["content"]?["parts"]?[0]?["text"] ??
+          "AI completion is not available";
     } catch (e) {
       throw FormatException(
         "Failed to parse AI response: $e \nResponse: $response",

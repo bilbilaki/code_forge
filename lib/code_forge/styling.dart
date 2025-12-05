@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// This class provides styling options for code selection in the code editor.
-class CodeSelectionStyle{
+class CodeSelectionStyle {
   /// The color of the cursor line, defaults to the highlight theme text color.
   final Color? cursorColor;
 
@@ -14,7 +14,7 @@ class CodeSelectionStyle{
   CodeSelectionStyle({
     this.cursorColor,
     this.selectionColor = const Color(0x6E2195F3),
-    this.cursorBubbleColor = Colors.blue
+    this.cursorBubbleColor = Colors.blue,
   });
 }
 
