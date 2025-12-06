@@ -24,7 +24,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void initState(){
-    _controller.text = little_code;
+    _controller.text = small_code;
     super.initState();
   }
 
@@ -33,7 +33,8 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: SafeArea(
         child: CodeForge(
-          filePath: "/home/athul/Projects/EhEh/sample.py",
+          language: langDart,
+          // filePath: "/home/athul/Projects/EhEh/sample.py",
           controller: _controller,
           textStyle: GoogleFonts.jetBrainsMono(),
           /* aiCompletion: AiCompletion(
@@ -41,12 +42,12 @@ class _MyAppState extends State<MyApp> {
               apiKey: "AIzaSyB-1JwovLrD9CJoZtEj5ZS43YJ7z7fAl9Q"
             )
           ), */
-          lspConfig: LspSocketConfig(
+          /* lspConfig: LspSocketConfig(
             filePath: "/home/athul/Projects/EhEh/sample.py",
             languageId: "python",
             serverUrl: "ws://0.0.0.0:3031",
             workspacePath: "/home/athul/Projects/EhEh",
-          ),
+          ), */
           gutterStyle: GutterStyle(
             backgroundColor: Color(0xFF252526),
             lineNumberStyle: TextStyle(
