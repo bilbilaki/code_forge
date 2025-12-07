@@ -30,7 +30,6 @@ class CodeForge extends StatefulWidget {
   final EdgeInsets? innerPadding;
   final ScrollController? verticalScrollController;
   final ScrollController? horizontalScrollController;
-  final UndoHistoryController? undoHistoryController;
   final CodeSelectionStyle? selectionStyle;
   final GutterStyle? gutterStyle;
   final SuggestionStyle? suggestionStyle;
@@ -58,7 +57,6 @@ class CodeForge extends StatefulWidget {
     this.focusNode,
     this.verticalScrollController,
     this.horizontalScrollController,
-    this.undoHistoryController,
     this.textStyle,
     this.innerPadding,
     this.readOnly = false,
@@ -406,6 +404,12 @@ class _CodeForgeState extends State<CodeForge>
 
       _previousValue = text;
       _prevSelection = currentSelection;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      if(widget.autoFocus){
+        _focusNode.requestFocus();
+      }
     });
   }
 
@@ -1124,14 +1128,11 @@ class _CodeForgeState extends State<CodeForge>
                 final width = _isMobile ? screenWidth * 0.63 : screenWidth * 0.3;
                 final maxHeight = _isMobile ? screenHeight * 0.4 : 550.0;
                 return Positioned(
-                  top: (screenHeight - position.dy) < maxHeight ? position.dy - maxHeight : position.dy,
-                  left: (screenWidth - position.dx) < width ? position.dx - width : position.dx,
+                  top: position.dy,
+                  left: position.dx,
                   child: MouseRegion(
                     onEnter: (_) => _isHoveringPopup.value = true,
-                    onExit: (_) {
-                      _isHoveringPopup.value = false;
-                      _hoverNotifier.value = null;
-                    },
+                    onExit: (_) => _isHoveringPopup.value = false,
                     child: ConstrainedBox(
                       constraints: BoxConstraints(
                         maxWidth: width,
@@ -1401,26 +1402,39 @@ class _CodeField extends LeafRenderObjectWidget {
       renderObject.updateSemanticTokens(semanticTokens!);
     }
     renderObject
-      .updateDiagnostics(diagnostics);
+      ..updateDiagnostics(diagnostics)
+      ..editorTheme = editorTheme
+      ..language = language
+      ..textStyle = textStyle
+      ..innerPadding = innerPadding
+      ..readOnly = readOnly
+      ..lineWrap = lineWrap
+      ..enableFolding = enableFolding
+      ..enableGuideLines = enableGuideLines
+      ..enableGutter = enableGutter
+      ..enableGutterDivider = enableGutterDivider
+      ..gutterStyle = gutterStyle
+      ..selectionStyle = selectionStyle;
   }
 }
 
 class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
   final CodeForgeController controller;
-  final Map<String, TextStyle> editorTheme;
-  final Mode language;
+  Map<String, TextStyle> _editorTheme;
+  Mode _language;
   final String? languageId;
-  final EdgeInsets? innerPadding;
+  EdgeInsets? _innerPadding;
   final ScrollController vscrollController, hscrollController;
   final FocusNode focusNode;
-  final bool readOnly;
+  bool _readOnly;
   final AnimationController caretBlinkController;
-  final TextStyle? textStyle;
-  final bool enableFolding, enableGuideLines, enableGutter;
-  final bool enableGutterDivider;
-  final GutterStyle gutterStyle;
-  final CodeSelectionStyle selectionStyle;
-  final bool isMobile, lineWrap;
+  TextStyle? _textStyle;
+  bool _enableFolding, _enableGuideLines, _enableGutter;
+  bool _enableGutterDivider;
+  GutterStyle _gutterStyle;
+  CodeSelectionStyle _selectionStyle;
+  final bool isMobile;
+  bool _lineWrap;
   final ValueNotifier<bool> selectionActiveNotifier, isHoveringPopup;
   final ValueNotifier<Offset> contextMenuOffsetNotifier, offsetNotifier;
   final ValueNotifier<List<dynamic>?> hoverNotifier, suggestionNotifier;
@@ -1434,7 +1448,7 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
   final List<FoldRange> _foldRanges = [];
   final _dtap = DoubleTapGestureRecognizer();
   final _onetap = TapGestureRecognizer();
-  late final double _lineHeight;
+  late double _lineHeight;
   late final double _gutterPadding;
   late final Paint _caretPainter;
   late final Paint _bracketHighlightPainter;
@@ -1506,19 +1520,19 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
 
   _CodeFieldRenderer({
     required this.controller,
-    required this.editorTheme,
-    required this.language,
+    required Map<String, TextStyle> editorTheme,
+    required Mode language,
     required this.vscrollController,
     required this.hscrollController,
     required this.focusNode,
-    required this.readOnly,
+    required bool readOnly,
     required this.caretBlinkController,
-    required this.enableFolding,
-    required this.enableGuideLines,
-    required this.enableGutter,
-    required this.enableGutterDivider,
-    required this.gutterStyle,
-    required this.selectionStyle,
+    required bool enableFolding,
+    required bool enableGuideLines,
+    required bool enableGutter,
+    required bool enableGutterDivider,
+    required GutterStyle gutterStyle,
+    required CodeSelectionStyle selectionStyle,
     required List<LspErrors> diagnostics,
     required this.isMobile,
     required this.selectionActiveNotifier,
@@ -1530,31 +1544,43 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
     required this.aiOffsetNotifier,
     required this.isHoveringPopup,
     required this.context,
-    required this.lineWrap,
+    required bool lineWrap,
     this.languageId,
-    this.innerPadding,
-    this.textStyle,
-  }) : _diagnostics = diagnostics
+    EdgeInsets? innerPadding,
+    TextStyle? textStyle,
+  }) : _editorTheme = editorTheme,
+       _language = language,
+       _readOnly = readOnly,
+       _enableFolding = enableFolding,
+       _enableGuideLines = enableGuideLines,
+       _enableGutter = enableGutter,
+       _enableGutterDivider = enableGutterDivider,
+       _gutterStyle = gutterStyle,
+       _selectionStyle = selectionStyle,
+       _lineWrap = lineWrap,
+       _innerPadding = innerPadding,
+       _textStyle = textStyle,
+       _diagnostics = diagnostics
   {
-    final fontSize = textStyle?.fontSize ?? 14.0;
-    final fontFamily = textStyle?.fontFamily;
+    final fontSize = _textStyle?.fontSize ?? 14.0;
+    final fontFamily = _textStyle?.fontFamily;
     final color =
-        textStyle?.color ?? editorTheme['root']?.color ?? Colors.black;
-    final lineHeightMultiplier = textStyle?.height ?? 1.2;
+        _textStyle?.color ?? _editorTheme['root']?.color ?? Colors.black;
+    final lineHeightMultiplier = _textStyle?.height ?? 1.2;
 
     _lineHeight = fontSize * lineHeightMultiplier;
 
     _syntaxHighlighter = SyntaxHighlighter(
-      language: language,
-      editorTheme: editorTheme,
-      baseTextStyle: textStyle,
+      language: _language,
+      editorTheme: _editorTheme,
+      baseTextStyle: _textStyle,
       languageId: languageId,
       onHighlightComplete: markNeedsPaint,
     );
 
     _gutterPadding = fontSize;
-    if (enableGutter) {
-      if (gutterStyle.gutterWidth != null) {
+    if (_enableGutter) {
+      if (_gutterStyle.gutterWidth != null) {
         _gutterWidth = gutterStyle.gutterWidth!;
       } else {
         final digits = controller.lineCount.toString().length;
@@ -1568,7 +1594,7 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
     _cachedLineCount = controller.lineCount;
 
     _caretPainter = Paint()
-      ..color = selectionStyle.cursorColor ?? color
+      ..color = _selectionStyle.cursorColor ?? color
       ..style = PaintingStyle.fill;
 
     _bracketHighlightPainter = Paint()
@@ -1657,6 +1683,135 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
       markNeedsLayout();
       markNeedsPaint();
     });
+  }
+
+  
+  Map<String, TextStyle> get editorTheme => _editorTheme;
+  Mode get language => _language;
+  TextStyle? get textStyle => _textStyle;
+  EdgeInsets? get innerPadding => _innerPadding;
+  bool get readOnly => _readOnly;
+  bool get lineWrap => _lineWrap;
+  bool get enableFolding => _enableFolding;
+  bool get enableGuideLines => _enableGuideLines;
+  bool get enableGutter => _enableGutter;
+  bool get enableGutterDivider => _enableGutterDivider;
+  GutterStyle get gutterStyle => _gutterStyle;
+  CodeSelectionStyle get selectionStyle => _selectionStyle;
+
+  
+  set editorTheme(Map<String, TextStyle> theme) {
+    if (identical(theme, _editorTheme)) return;
+    _editorTheme = theme;
+    _syntaxHighlighter.dispose();
+    _syntaxHighlighter = SyntaxHighlighter(
+      language: language,
+      editorTheme: theme,
+      baseTextStyle: textStyle,
+    );
+    _paragraphCache.clear();
+    markNeedsLayout();
+    markNeedsPaint();
+  }
+
+  set language(Mode lang) {
+    if (identical(lang, _language)) return;
+    _language = lang;
+    _syntaxHighlighter.dispose();
+    _syntaxHighlighter = SyntaxHighlighter(
+      language: lang,
+      editorTheme: editorTheme,
+      baseTextStyle: textStyle,
+    );
+    _paragraphCache.clear();
+    markNeedsLayout();
+    markNeedsPaint();
+  }
+
+  set textStyle(TextStyle? style) {
+    if (identical(style, _textStyle)) return;
+    _textStyle = style;
+    
+    final fontSize = style?.fontSize ?? 14.0;
+    final lineHeightMultiplier = style?.height ?? 1.2;
+    
+    _lineHeight = fontSize * lineHeightMultiplier;
+    
+    _syntaxHighlighter.dispose();
+    _syntaxHighlighter = SyntaxHighlighter(
+      language: language,
+      editorTheme: editorTheme,
+      baseTextStyle: style,
+    );
+    
+    _paragraphCache.clear();
+    _lineWidthCache.clear();
+    _lineTextCache.clear();
+    _lineHeightCache.clear();
+    
+    markNeedsLayout();
+    markNeedsPaint();
+  }
+
+  set innerPadding(EdgeInsets? padding) {
+    if (identical(padding, _innerPadding)) return;
+    _innerPadding = padding;
+    markNeedsLayout();
+    markNeedsPaint();
+  }
+
+  set readOnly(bool value) {
+    if (_readOnly == value) return;
+    _readOnly = value;
+    markNeedsPaint();
+  }
+
+  set lineWrap(bool value) {
+    if (_lineWrap == value) return;
+    _lineWrap = value;
+    _paragraphCache.clear();
+    _lineHeightCache.clear();
+    markNeedsLayout();
+    markNeedsPaint();
+  }
+
+  set enableFolding(bool value) {
+    if (_enableFolding == value) return;
+    _enableFolding = value;
+    markNeedsLayout();
+    markNeedsPaint();
+  }
+
+  set enableGuideLines(bool value) {
+    if (_enableGuideLines == value) return;
+    _enableGuideLines = value;
+    markNeedsPaint();
+  }
+
+  set enableGutter(bool value) {
+    if (_enableGutter == value) return;
+    _enableGutter = value;
+    markNeedsLayout();
+    markNeedsPaint();
+  }
+
+  set enableGutterDivider(bool value) {
+    if (_enableGutterDivider == value) return;
+    _enableGutterDivider = value;
+    markNeedsPaint();
+  }
+
+  set gutterStyle(GutterStyle style) {
+    if (identical(style, _gutterStyle)) return;
+    _gutterStyle = style;
+    markNeedsPaint();
+  }
+
+  set selectionStyle(CodeSelectionStyle style) {
+    if (identical(style, _selectionStyle)) return;
+    _selectionStyle = style;
+    _caretPainter.color = style.cursorColor ?? _editorTheme['root']!.color!;
+    markNeedsPaint();
   }
 
   void _ensureCaretVisible() {

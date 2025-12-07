@@ -22,9 +22,20 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final _controller = CodeForgeController();
 
+  Future<LspConfig> getLsp() async{
+    final data = await LspStdioConfig.start(
+      executable: "/home/athul/flutter/flutter/bin//dart",
+      args: ["language-server", "--protocol=lsp"],
+      filePath: "/home/athul/Projects/code_forge/lib/code_forge/code_area.dart",
+      workspacePath: "/home/athul/Projects/code_forge/lib/",
+      languageId: "dart"
+    );
+    return data;
+  }
+
   @override
   void initState(){
-    _controller.text = small_code;
+    // _controller.text = small_code;
     super.initState();
   }
 
@@ -32,36 +43,46 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: SafeArea(
-        child: CodeForge(
-          language: langDart,
-          // filePath: "/home/athul/Projects/EhEh/sample.py",
-          controller: _controller,
-          textStyle: GoogleFonts.jetBrainsMono(),
-          /* aiCompletion: AiCompletion(
-            model: Gemini(
-              apiKey: "AIzaSyB-1JwovLrD9CJoZtEj5ZS43YJ7z7fAl9Q"
-            )
-          ), */
-          /* lspConfig: LspSocketConfig(
-            filePath: "/home/athul/Projects/EhEh/sample.py",
-            languageId: "python",
-            serverUrl: "ws://0.0.0.0:3031",
-            workspacePath: "/home/athul/Projects/EhEh",
-          ), */
-          gutterStyle: GutterStyle(
-            backgroundColor: Color(0xFF252526),
-            lineNumberStyle: TextStyle(
-              color: Color(0xFF858585),
-              fontSize: 12,
-            ),
-            foldedIconColor: Color(0xFFD4D4D4),
-            unfoldedIconColor: Color(0xFF858585),
-          ),
-          selectionStyle: CodeSelectionStyle(
-            cursorColor: const Color(0xFFAEAFAD),
-            //TODO
-            selectionColor: const Color(0xFF264F78).withOpacity(0.5),
-          ),
+        child: FutureBuilder<LspConfig>(
+          future: getLsp(),
+          builder: (context, snapshot) {
+            if(snapshot.connectionState == ConnectionState.waiting){
+              return CircularProgressIndicator();
+            }
+            return CodeForge(
+              language: langDart,
+              // filePath: "/home/athul/Projects/EhEh/sample.py",
+              controller: _controller,
+              textStyle: GoogleFonts.jetBrainsMono(),
+              /* aiCompletion: AiCompletion(
+                model: Gemini(
+                  apiKey: "AIzaSyB-1JwovLrD9CJoZtEj5ZS43YJ7z7fAl9Q"
+                )
+              ), */
+              /* lspConfig: LspSocketConfig(
+                filePath: "/home/athul/Projects/EhEh/sample.py",
+                languageId: "python",
+                serverUrl: "ws://0.0.0.0:3031",
+                workspacePath: "/home/athul/Projects/EhEh",
+              ), */
+              lspConfig: snapshot.data,
+              filePath: "/home/athul/Projects/code_forge/lib/code_forge/code_area.dart",
+              gutterStyle: GutterStyle(
+                backgroundColor: Color(0xFF252526),
+                lineNumberStyle: TextStyle(
+                  color: Color(0xFF858585),
+                  fontSize: 12,
+                ),
+                foldedIconColor: Color(0xFFD4D4D4),
+                unfoldedIconColor: Color(0xFF858585),
+              ),
+              selectionStyle: CodeSelectionStyle(
+                cursorColor: const Color(0xFFAEAFAD),
+                //TODO
+                selectionColor: const Color(0xFF264F78).withOpacity(0.5),
+              ),
+            );
+          }
         )
       ),
     );
