@@ -1219,118 +1219,215 @@ class _CodeForgeState extends State<CodeForge>
                 if(hov == null || widget.lspConfig == null) return SizedBox.shrink();
                 final Offset position = hov[0];
                 final Map<String, int> lineChar = hov[1];
-                final hoverScrollController = ScrollController();
                 final width = _isMobile ? screenWidth * 0.63 : screenWidth * 0.3;
                 final maxHeight = _isMobile ? screenHeight * 0.4 : 550.0;
+                
                 return Positioned(
                   top: position.dy,
                   left: position.dx,
                   child: MouseRegion(
                     onEnter: (_) => _isHoveringPopup.value = true,
                     onExit: (_) => _isHoveringPopup.value = false,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: width,
-                        maxHeight: maxHeight
-                      ),
-                      child: Card(
-                        color: _hoverDetailsStyle.backgroundColor,
-                        shape: _hoverDetailsStyle.shape,
-                        child: FutureBuilder<String>(
-                            future: (() async{
-                              final lspConfig = widget.lspConfig;
-                              final line = lineChar['line']!;
-                              final character = lineChar['character']!;
-                              final diagnostic = _diagnosticsNotifier.value.firstWhere(
-                                (diag) {
-                                  final diagStartLine = diag.range['start']['line'] as int;
-                                  final diagEndLine = diag.range['end']['line'] as int;
-                                  final diagStartChar = diag.range['start']['character'] as int;
-                                  final diagEndChar = diag.range['end']['character'] as int;
-                                  
-                                  if (line < diagStartLine || line > diagEndLine) {
-                                    return false;
-                                  }
-                                  
-                                  if (line == diagStartLine && line == diagEndLine) {
-                                    return character >= diagStartChar && character < diagEndChar;
-                                  } else if (line == diagStartLine) {
-                                    return character >= diagStartChar;
-                                  } else if (line == diagEndLine) {
-                                    return character < diagEndChar;
-                                  } else {
-                                    return true;
-                                  }
-                                },
-                                orElse: () => LspErrors(severity: 0, range: {}, message: ''),
-                              );
+                    child: FutureBuilder<Map<String, dynamic>>(
+                      future: (() async{
+                        final lspConfig = widget.lspConfig;
+                        final line = lineChar['line']!;
+                        final character = lineChar['character']!;
                         
-                              if(diagnostic.message.isNotEmpty){
-                                return diagnostic.message;
-                              }
+                        String diagnosticMessage = '';
+                        int severity = 0;
+                        String hoverMessage = '';
                         
-                              if(lspConfig != null){
-                                return await lspConfig.getHover(line, character);
-                              }
+                        final diagnostic = _diagnosticsNotifier.value.firstWhere(
+                          (diag) {
+                            final diagStartLine = diag.range['start']['line'] as int;
+                            final diagEndLine = diag.range['end']['line'] as int;
+                            final diagStartChar = diag.range['start']['character'] as int;
+                            final diagEndChar = diag.range['end']['character'] as int;
+                            
+                            if (line < diagStartLine || line > diagEndLine) {
+                              return false;
+                            }
+                            
+                            if (line == diagStartLine && line == diagEndLine) {
+                              return character >= diagStartChar && character < diagEndChar;
+                            } else if (line == diagStartLine) {
+                              return character >= diagStartChar;
+                            } else if (line == diagEndLine) {
+                              return character < diagEndChar;
+                            } else {
+                              return true;
+                            }
+                          },
+                          orElse: () => LspErrors(severity: 0, range: {}, message: ''),
+                        );
                         
-                              final hoverDetails = await lspConfig!.getHover(line, character);
-                              return hoverDetails;
-                            })(),
-                            builder: (_, snapShot) {
-                              if (snapShot.hasError) {
-                                return SizedBox.shrink();
-                              }
-                              final data = snapShot.data;
-                              if (data == null || data.isEmpty) {
-                                return SizedBox.shrink();
-                              }
-                              if (snapShot.connectionState == ConnectionState.waiting) {
-                                return Text(
+                        if(diagnostic.message.isNotEmpty){
+                          diagnosticMessage = diagnostic.message;
+                          severity = diagnostic.severity;
+                        }
+                        
+                        if(lspConfig != null){
+                          hoverMessage = await lspConfig.getHover(line, character);
+                        }
+                        
+                        return {
+                          'diagnostic': diagnosticMessage,
+                          'severity': severity,
+                          'hover': hoverMessage,
+                        };
+                      })(),
+                      builder: (_, snapShot) {
+                        if (snapShot.hasError) {
+                          return SizedBox.shrink();
+                        }
+                        
+                        if (snapShot.connectionState == ConnectionState.waiting) {
+                          return ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: width,
+                              maxHeight: maxHeight
+                            ),
+                            child: Card(
+                              color: _hoverDetailsStyle.backgroundColor,
+                              shape: _hoverDetailsStyle.shape,
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
                                   "Loading...",
                                   style: _hoverDetailsStyle.textStyle,
-                                );
-                              }
-                              return Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: RawScrollbar(
-                                  controller: hoverScrollController,
-                                  thumbVisibility: true,
-                                  thumbColor: _editorTheme['root']!.color!.withAlpha(100),
-                                  child: SingleChildScrollView(
-                                    controller: hoverScrollController,
-                                    child: MarkdownBlock(
-                                      data: data,
-                                      config: MarkdownConfig.darkConfig.copy(
-                                        configs: [
-                                          PConfig(
-                                            textStyle: _hoverDetailsStyle.textStyle
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+                        
+                        final data = snapShot.data;
+                        if (data == null) {
+                          return SizedBox.shrink();
+                        }
+                        
+                        final diagnosticMessage = data['diagnostic'] ?? '';
+                        final severity = data['severity'] ?? 0;
+                        final hoverMessage = data['hover'] ?? '';
+                        
+                        if (diagnosticMessage.isEmpty && hoverMessage.isEmpty) {
+                          return SizedBox.shrink();
+                        }
+                        
+                        IconData diagnosticIcon;
+                        Color diagnosticColor;
+                        
+                        switch (severity) {
+                          case 1:
+                            diagnosticIcon = Icons.error_outline;
+                            diagnosticColor = Colors.red;
+                            break;
+                          case 2:
+                            diagnosticIcon = Icons.warning_amber_outlined;
+                            diagnosticColor = Colors.orange;
+                            break;
+                          case 3:
+                            diagnosticIcon = Icons.info_outline;
+                            diagnosticColor = Colors.blue;
+                            break;
+                          case 4:
+                            diagnosticIcon = Icons.lightbulb_outline;
+                            diagnosticColor = Colors.grey;
+                            break;
+                          default:
+                            diagnosticIcon = Icons.info_outline;
+                            diagnosticColor = Colors.grey;
+                        }
+                        
+                        final hoverScrollController = ScrollController();
+                        
+                        return ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: width,
+                            maxHeight: maxHeight
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (diagnosticMessage.isNotEmpty)
+                                Card(
+                                  color: _hoverDetailsStyle.backgroundColor,
+                                  shape: _hoverDetailsStyle.shape,
+                                  margin: EdgeInsets.only(bottom: hoverMessage.isNotEmpty ? 4 : 0),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Icon(
+                                          diagnosticIcon,
+                                          color: diagnosticColor,
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Flexible(
+                                          child: Text(
+                                            diagnosticMessage,
+                                            style: _hoverDetailsStyle.textStyle,
                                           ),
-                                          PreConfig(
-                                            language: widget.lspConfig?.languageId ?? "dart",
-                                            theme: _editorTheme,
-                                            textStyle: TextStyle(
-                                              fontSize: _hoverDetailsStyle.textStyle.fontSize
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              
+                              if (hoverMessage.isNotEmpty)
+                                Flexible(
+                                  child: Card(
+                                    color: _hoverDetailsStyle.backgroundColor,
+                                    shape: _hoverDetailsStyle.shape,
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(8.0),
+                                      child: RawScrollbar(
+                                        controller: hoverScrollController,
+                                        thumbVisibility: true,
+                                        thumbColor: _editorTheme['root']!.color!.withAlpha(100),
+                                        child: SingleChildScrollView(
+                                          controller: hoverScrollController,
+                                          child: MarkdownBlock(
+                                            data: hoverMessage,
+                                            config: MarkdownConfig.darkConfig.copy(
+                                              configs: [
+                                                PConfig(
+                                                  textStyle: _hoverDetailsStyle.textStyle
+                                                ),
+                                                PreConfig(
+                                                  language: widget.lspConfig?.languageId ?? "dart",
+                                                  theme: _editorTheme,
+                                                  textStyle: TextStyle(
+                                                    fontSize: _hoverDetailsStyle.textStyle.fontSize
+                                                  ),
+                                                  styleNotMatched: TextStyle(
+                                                    color: _editorTheme['root']!.color
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    borderRadius: BorderRadius.zero,
+                                                    border: Border.all(
+                                                      width: 0.2,
+                                                      color: _editorTheme['root']!.color ?? Colors.grey
+                                                    )
+                                                  )
+                                                )
+                                              ]
                                             ),
-                                            styleNotMatched: TextStyle(
-                                              color: _editorTheme['root']!.color
-                                            ),
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.zero,
-                                              border: Border.all(
-                                                width: 0.2,
-                                                color: _editorTheme['root']!.color ?? Colors.grey
-                                              )
-                                            )
-                                          )
-                                        ]
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
-                              );
-                            }
+                            ],
                           ),
-                      ),
+                        );
+                      }
                     ),
                   ),
                 );
