@@ -69,7 +69,7 @@ class _MyAppState extends State<MyApp> {
       home: Scaffold(
         floatingActionButton: FloatingActionButton(
           onPressed: (){
-            if(undoController.canUndo) undoController.undo();
+            _controller.foldAll();
           }
         ),
         body: SafeArea(

@@ -1,7 +1,10 @@
 import 'dart:async';
-import 'package:code_forge/code_forge.dart';
-import 'package:flutter/services.dart';
+
+import '../code_forge.dart';
 import 'rope.dart';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class CodeForgeController implements DeltaTextInputClient {
   static const _flushDelay = Duration(milliseconds: 300);
@@ -13,8 +16,10 @@ class CodeForgeController implements DeltaTextInputClient {
   Timer? _flushTimer;
   TextRange? dirtyRegion;
   List<FoldRange> foldings = [];
+  List<SearchHighlight> searchHighlights = [];
   String? _cachedText, _bufferLineText;
   bool _bufferDirty = false, bufferNeedsRepaint = false, selectionOnly = false;
+  bool searchHighlightsChanged = false;
   int _bufferLineRopeStart = 0, _bufferLineOriginalLength = 0;
   int _cachedTextVersion = -1, _currentVersion = 0;
   int? dirtyLine, _bufferLineIndex;
@@ -783,6 +788,7 @@ class CodeForgeController implements DeltaTextInputClient {
     dirtyRegion = null;
     dirtyLine = null;
     lineStructureChanged = false;
+    searchHighlightsChanged = false;
   }
 
   /// Insert text at the current cursor position (or replace selection).
@@ -990,6 +996,112 @@ class CodeForgeController implements DeltaTextInputClient {
     notifyListeners();
   }
 
+  void findWord(
+    String word,
+  { 
+    TextStyle? highlightStyle,
+    bool matchCase = false,
+    bool matchWholeWord = false,
+  }){
+    final style = highlightStyle ?? const TextStyle(
+      backgroundColor: Colors.amberAccent
+    );
+    
+    searchHighlights.clear();
+    
+    if (word.isEmpty) {
+      searchHighlightsChanged = true;
+      notifyListeners();
+      return;
+    }
+    
+    final searchText = text;
+    final searchWord = matchCase ? word : word.toLowerCase();
+    final textToSearch = matchCase ? searchText : searchText.toLowerCase();
+    
+    int offset = 0;
+    while (offset < textToSearch.length) {
+      final index = textToSearch.indexOf(searchWord, offset);
+      if (index == -1) break;
+      
+      bool isMatch = true;
+      
+      if (matchWholeWord) {
+        final before = index > 0 ? searchText[index - 1] : '';
+        final after = index + word.length < searchText.length 
+            ? searchText[index + word.length] 
+            : '';
+        
+        final isWordChar = RegExp(r'\w');
+        final beforeIsWord = before.isNotEmpty && isWordChar.hasMatch(before);
+        final afterIsWord = after.isNotEmpty && isWordChar.hasMatch(after);
+        
+        if (beforeIsWord || afterIsWord) {
+          isMatch = false;
+        }
+      }
+      
+      if (isMatch) {
+        searchHighlights.add(
+          SearchHighlight(
+            start: index,
+            end: index + word.length,
+            style: style,
+          ),
+        );
+      }
+      
+      offset = index + 1;
+    }
+    
+    searchHighlightsChanged = true;
+    notifyListeners();
+  }
+
+  void findRegex(
+    RegExp regex,
+    TextStyle? highlightStyle,
+  ){
+    final style = highlightStyle ?? const TextStyle(
+      backgroundColor: Colors.amberAccent
+    );
+    
+    searchHighlights.clear();
+    
+    final searchText = text;
+    final matches = regex.allMatches(searchText);
+    
+    for (final match in matches) {
+      searchHighlights.add(
+        SearchHighlight(
+          start: match.start,
+          end: match.end,
+          style: style,
+        ),
+      );
+    }
+    
+    searchHighlightsChanged = true;
+    notifyListeners();
+  }
+
+  /// Clear all search highlights
+  void clearSearchHighlights() {
+    searchHighlights.clear();
+    searchHighlightsChanged = true;
+    notifyListeners();
+  }
+
+  //TODO
+  void toggleFold(int lineNumber){
+    throw RangeError("No fold range is detected in the selected range");
+  }
+
+  void foldAll(){}
+
+  void unfoldAll(){}
+
+  /// Dispose the controller
   void dispose() {
     _listeners.clear();
     connection?.close();

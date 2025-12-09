@@ -196,7 +196,6 @@ class SyntaxHighlighter {
     int currentPos = 0;
 
     for (final semantic in semanticSpans) {
-      // Clamp semantic boundaries to line length
       final semanticStart = semantic.startChar.clamp(0, lineText.length);
       final semanticEnd = semantic.endChar.clamp(0, lineText.length);
 

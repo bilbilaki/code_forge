@@ -119,3 +119,21 @@ class HoverDetailsStyle extends OverlayStyle {
     required super.textStyle,
   });
 }
+
+/// Represents a highlighted search result in the editor
+class SearchHighlight {
+  /// The start offset of the highlighted text
+  final int start;
+  
+  /// The end offset of the highlighted text
+  final int end;
+  
+  /// The text style to apply to the highlighted text
+  final TextStyle style;
+  
+  const SearchHighlight({
+    required this.start,
+    required this.end,
+    required this.style,
+  });
+}
