@@ -103,3 +103,6 @@ This release establishes **CodeForge** as a powerful, production-ready code edit
 ## 1.0.1
 
     * Updated README.md
+
+## 1.0.2
+    * Updated README.md

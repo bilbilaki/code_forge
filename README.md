@@ -142,7 +142,7 @@ Add CodeForge to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  code_forge: ^1.0.0
+  code_forge: ^1.0.2
 ```
 
 Then run:
@@ -214,7 +214,7 @@ Connect to any Language Server Protocol compatible server for intelligent code a
 CodeForge provides a built-in LSP client that allows you to connect to any LSP server for intelligent highlighting, completions, hover details, diagnostics, and more.
 
 ## Types
-#### There are two ways to configure LSP client with code crafter:
+#### There are two ways to configure LSP client with the `CodeForge`:
 1. Using WebSocket (easy and recommended)
 2. Using stdio
 
@@ -741,11 +741,59 @@ CodeSelectionStyle({
 })
 ```
 
+</details>
+
 ---
+<details>
+<summary><h2>⌨️ Keyboard Shortcuts</h2></summary>
+CodeForge supports a variety of keyboard shortcuts for efficient editing:
+
+### Editing
+- **Ctrl+C** — Copy selected text
+- **Ctrl+X** — Cut selected text
+- **Ctrl+V** — Paste text
+- **Ctrl+A** — Select all text
+- **Ctrl+D** — Duplicate current line
+- **Ctrl+Z** — Undo last action
+- **Ctrl+Y** — Redo last action
+- **Ctrl+Backspace** — Delete word backward
+- **Ctrl+Delete** — Delete word forward
+
+### Navigation
+- **Ctrl+Arrow Left** — Move cursor to previous word
+- **Ctrl+Arrow Right** — Move cursor to next word
+- **Ctrl+Shift+Arrow Left** — Select to previous word
+- **Ctrl+Shift+Arrow Right** — Select to next word
+- **Ctrl+Shift+Arrow Up** — Move current line up
+- **Ctrl+Shift+Arrow Down** — Move current line down
+
+### Indentation
+- **Tab** — Indent current line or accept AI completion/suggestion
+- **Shift+Tab** — Unindent current line
+
+### Suggestions & AI Completion
+- **Arrow Up/Down** — Navigate through suggestions
+- **Enter/Tab** — Accept current suggestion
+- **Escape** — Close suggestions or hover details
+
+### Selection
+- **Shift+Arrow Keys** — Extend selection
+- **Shift+Home** — Select to line start
+- **Shift+End** — Select to line end
 
 </details>
 
 ---
+
+<details>
+<summary><h2>🚀 Upcoming Features</h2></summary>
+  <ul>
+    <li><h3>LSP Code Actions</h3></li>
+    <li><h3>LSP Inlay Completion</h3></li>
+    <li><h3>More Keyboard shortcuts</h3></li>
+    <li><h3>More Customisation Options</h3></li>
+  </ul>
+</details>
 
 ## 🤝 Contributing
 
