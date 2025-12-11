@@ -99,3 +99,7 @@
 
 This release establishes **CodeForge** as a powerful, production-ready code editor for Flutter applications, offering the same level of sophistication found in professional code editors while maintaining Flutter's declarative UI paradigm.
 </details>
+
+## 1.0.1
+
+    * Updated README.md
