@@ -209,9 +209,6 @@ Connect to any Language Server Protocol compatible server for intelligent code a
 
 CodeForge provides a built-in LSP client that allows you to connect to any LSP server for intelligent highlighting, completions, hover details, diagnostics, and more.
 
-> [!WARNING]
-> If you're using the LSP, you must provide a valid `filePath` to the `filePath` parameter of the `CodeForge` widget. Also The `filePath` provided in both the `CodeForge` widget and the `LspConfig` class must be the same. Otherwise, an exception will be thrown.
-
 ## Types
 #### There are two ways to configure LSP client with code crafter:
 1. Using WebSocket (easy and recommended)
