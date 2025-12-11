@@ -35,6 +35,10 @@
   <img src="https://raw.githubusercontent.com/heckmon/code_forge/refs/heads/main/gifs/code_forge_100k.gif?token=GHSAT0AAAAAADG255TYTX7TQIP7DUNCMHE62J2L74Q" alt="CodeForge Demo" width="800"/><sub><br>large code support (tested with 100k+ lines) and LSP based intelligent lazy highlighting</sub>
 </p>
 
+> [!NOTE]
+>
+> CodeForge does **not** support Flutter web, as it relies on `dart:io` for core functionality. Web support may be considered in the future if dependencies allow.
+
 ## ✨ Why CodeForge?
 
 **CodeForge** is a next-generation code editor widget designed for developers who demand more. Whether you're building an IDE, a code snippet viewer, or an educational coding platform, CodeForge delivers:
