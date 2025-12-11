@@ -32,4 +32,3 @@ migrate_working_dir/
 
 /example/lib/little_code.dart
 /example/lib/big_code.dart
-/example/pubspec.lock
