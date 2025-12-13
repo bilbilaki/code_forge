@@ -2460,28 +2460,18 @@ class _CodeField extends LeafRenderObjectWidget {
 
 class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
   final CodeForgeController controller;
-  Map<String, TextStyle> _editorTheme;
-  Mode _language;
   final String? languageId;
-  EdgeInsets? _innerPadding;
   final ScrollController vscrollController, hscrollController;
   final FocusNode focusNode;
-  bool _readOnly;
   final AnimationController caretBlinkController;
-  TextStyle? _textStyle;
-  bool _enableFolding, _enableGuideLines, _enableGutter;
-  bool _enableGutterDivider;
-  GutterStyle _gutterStyle;
-  CodeSelectionStyle _selectionStyle;
   final bool isMobile;
-  bool _lineWrap;
   final ValueNotifier<bool> selectionActiveNotifier, isHoveringPopup;
   final ValueNotifier<Offset> contextMenuOffsetNotifier, offsetNotifier;
   final ValueNotifier<List<dynamic>?> hoverNotifier, suggestionNotifier;
   final ValueNotifier<Offset?> aiOffsetNotifier;
   final ValueNotifier<String?> aiNotifier;
   final BuildContext context;
-  TextStyle? _aiCompletionTextStyle;
+  final LspConfig? lspConfig;
   final Map<int, double> _lineWidthCache = {};
   final Map<int, String> _lineTextCache = {};
   final Map<int, ui.Paragraph> _paragraphCache = {};
@@ -2496,33 +2486,35 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
   late final ui.ParagraphStyle _paragraphStyle;
   late final ui.TextStyle _uiTextStyle;
   late final SyntaxHighlighter _syntaxHighlighter;
-  final LspConfig? lspConfig;
   late double _gutterWidth;
+  TextStyle? _aiCompletionTextStyle;
+  Map<String, TextStyle> _editorTheme;
+  Mode _language;
+  EdgeInsets? _innerPadding;
+  TextStyle? _textStyle;
+  GutterStyle _gutterStyle;
+  CodeSelectionStyle _selectionStyle;
   List<LspErrors> _diagnostics;
-  int _cachedLineCount = 0;
   int _cachedCaretOffset = -1, _cachedCaretLine = 0, _cachedCaretLineStart = 0;
   int? _dragStartOffset;
   Timer? _selectionTimer, _hoverTimer;
   Offset? _pointerDownPosition;
   Offset _currentPosition = Offset.zero;
-  bool _foldRangesNeedsClear = false;
-  bool _isFoldToggleInProgress = false;
+  bool _enableFolding, _enableGuideLines, _enableGutter, _enableGutterDivider;
+  bool _isFoldToggleInProgress = false, _lineWrap;
+  bool _foldRangesNeedsClear = false, _insertingPlaceholder = false;
   bool _selectionActive = false, _isDragging = false;
   bool _draggingStartHandle = false, _draggingEndHandle = false;
-  bool _showBubble = false, _draggingCHandle = false;
+  bool _showBubble = false, _draggingCHandle = false, _readOnly;
   Rect? _startHandleRect, _endHandleRect, _normalHandle;
   double _longLineWidth = 0.0, _wrapWidth = double.infinity;
-  int _extraSpaceToAdd = 0;
+  int _extraSpaceToAdd = 0, _cachedLineCount = 0;
   String? _aiResponse, _lastProcessedText;
   TextSelection? _lastSelectionForAi;
-  bool _insertingPlaceholder = false;
-  int? _placeholderInsertOffset;
-  int _placeholderLineCount = 0;
   ui.Paragraph? _cachedMagnifiedParagraph;
-  int? _cachedMagnifiedLine;
-  int? _cachedMagnifiedOffset;
-  int _lastAppliedSemanticVersion = -1;
-  int _lastDocumentVersion = -1;
+  int? _placeholderInsertOffset, _cachedMagnifiedLine, _cachedMagnifiedOffset;
+  int _placeholderLineCount = 0;
+  int _lastAppliedSemanticVersion = -1, _lastDocumentVersion = -1;
 
   void updateSemanticTokens(List<LspSemanticToken> tokens, int version) {
     if (version <= _lastAppliedSemanticVersion) return;
@@ -2803,7 +2795,11 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
   set editorTheme(Map<String, TextStyle> theme) {
     if (identical(theme, _editorTheme)) return;
     _editorTheme = theme;
-    _syntaxHighlighter.dispose();
+    try {
+      _syntaxHighlighter.dispose();
+    } catch (e) {
+      //
+    }
     _syntaxHighlighter = SyntaxHighlighter(
       language: language,
       editorTheme: theme,
@@ -2817,7 +2813,11 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
   set language(Mode lang) {
     if (identical(lang, _language)) return;
     _language = lang;
-    _syntaxHighlighter.dispose();
+    try {
+      _syntaxHighlighter.dispose();
+    } catch (e) {
+      //
+    }
     _syntaxHighlighter = SyntaxHighlighter(
       language: lang,
       editorTheme: editorTheme,
