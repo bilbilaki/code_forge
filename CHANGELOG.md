@@ -106,3 +106,7 @@ This release establishes **CodeForge** as a powerful, production-ready code edit
 
 ## 1.0.2
     * Updated README.md
+
+## 1.1.0
+    * Fixed keyborad not appearing bug in Android.
+    * Added more public API methods in the controller, such as copy, paste, selectAll, cut, arrow key navigations, etc
