@@ -785,16 +785,6 @@ CodeForge supports a variety of keyboard shortcuts for efficient editing:
 
 ---
 
-<details>
-<summary><h2>🚀 Upcoming Features</h2></summary>
-  <ul>
-    <li><h3>LSP Code Actions</h3></li>
-    <li><h3>LSP Inlay Completion</h3></li>
-    <li><h3>More Keyboard shortcuts</h3></li>
-    <li><h3>More Customisation Options</h3></li>
-  </ul>
-</details>
-
 ## 🤝 Contributing
 
 Contributions are welcome! Whether it's bug fixes, new features, or documentation improvements.
