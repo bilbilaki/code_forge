@@ -69,15 +69,15 @@
     <h3>🤖 AI Code Completion</h3>
     <p>Intelligent code suggestions powered by AI models like Gemini. Auto, manual, or mixed completion modes with smart debouncing.</p>
     <div style="text-align:center;">
-      <img src="https://raw.githubusercontent.com/heckmon/code_forge/refs/heads/main/gifs/cf_ai.gif" alt="AI Completion" style="width:100%;height:auto;max-width:480px;" />
+      <img src="https://raw.githubusercontent.com/heckmon/code_forge/refs/heads/main/gifs/cf_ai.gif" alt="AI Completion" style="width:100%;height:auto;" />
     </div>
   </div>
 
   <div style="flex: 0 1 50%; min-width:300px;">
     <h3>🔌 LSP Integration</h3>
-    <p>Full Language Server Protocol support with real-time diagnostics, hover documentation, and semantic highlighting.</p>
+    <p>Full Language Server Protocol support with real-time diagnostics, hover documentation, Code Actions and semantic highlighting.</p>
     <div style="text-align:center;">
-      <img src="https://raw.githubusercontent.com/heckmon/code_forge/refs/heads/main/gifs/cf_lsp.gif" alt="LSP Integration" style="width:100%;height:auto;max-width:480px;" />
+      <img src="https://raw.githubusercontent.com/heckmon/code_forge/refs/heads/dev/gifs/cf_lsp_new.gif" alt="LSP Integration" style="width:100%;height:auto;" />
     </div>
   </div>
 
@@ -85,7 +85,7 @@
     <h3>📁 Smart Code Folding</h3>
     <p>Collapse and expand code blocks with visual indicators. Navigate large files with ease.</p>
     <div style="text-align:center;">
-      <img src="https://raw.githubusercontent.com/heckmon/code_forge/refs/heads/main/gifs/cf_fold.gif" alt="Code Folding" style="width:100%;height:auto;max-width:480px;" />
+      <img src="https://raw.githubusercontent.com/heckmon/code_forge/refs/heads/main/gifs/cf_fold.gif" alt="Code Folding" style="width:100%;height:auto;" />
     </div>
   </div>
 
@@ -93,7 +93,7 @@
     <h3>🎨 Syntax Highlighting</h3>
     <p>Beautiful syntax highlighting for 180+ languages with customizable themes and semantic token support.</p>
     <div style="text-align:center;">
-      <img src="https://raw.githubusercontent.com/heckmon/code_forge/refs/heads/main/gifs/cf_themes.gif" alt="Syntax Highlighting" style="width:100%;height:auto;max-width:480px;" />
+      <img src="https://raw.githubusercontent.com/heckmon/code_forge/refs/heads/main/gifs/cf_themes.gif" alt="Syntax Highlighting" style="width:100%;height:auto;" />
     </div>
   </div>
 </div>
@@ -142,7 +142,7 @@ Add CodeForge to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  code_forge: ^1.1.0
+  code_forge: ^1.2.0
 ```
 
 Then run:

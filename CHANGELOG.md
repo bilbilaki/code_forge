@@ -110,3 +110,9 @@ This release establishes **CodeForge** as a powerful, production-ready code edit
 ## 1.1.0
     * Fixed keyboard would not appear in Android.
     * Added more public API methods in the controller, such as copy, paste, selectAll, cut, arrow key navigations, etc
+
+## 1.2.0
+    * FEATURE: Added LSP Code Actions.
+    * FEATURE: Enhanced AI Completion for large files.
+    * FEATURE: Added more public method APIs in the controller and the LspConfig class.
+    * FIX: Completion bug in the first line.

@@ -69,12 +69,11 @@ sealed class Models {
 
   @protected
   final String instruction =
-    "You are a code completion engine. "
-    "The input contains partial code context split into sections, with the exact insertion point marked by the placeholder '<|CURSOR|>'. "
-    "Using only the provided context, generate the code that should be inserted at the cursor position. "
-    "Do not repeat the placeholder, do not include explanations, comments, formatting markers, or surrounding context. "
-    "Return only the code to insert.";
-
+      "You are a code completion engine. "
+      "The input contains partial code context split into sections, with the exact insertion point marked by the placeholder '<|CURSOR|>'. "
+      "Using only the provided context, generate the code that should be inserted at the cursor position. "
+      "Do not repeat the placeholder, do not include explanations, comments, formatting markers, or surrounding context. "
+      "Return only the code to insert.";
 
   Map<String, dynamic> buildRequest(String code);
 

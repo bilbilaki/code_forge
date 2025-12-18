@@ -89,7 +89,7 @@ class CodeForgeController implements DeltaTextInputClient {
   }
 
   /// Callback to get the LSP code action at the current cursor position
-  void getCodeAction(){
+  void getCodeAction() {
     userCodeAction?.call();
   }
 

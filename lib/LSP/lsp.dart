@@ -90,9 +90,7 @@ sealed class LspConfig {
           {'uri': workspaceUri, 'name': 'workspace'},
         ],
         'capabilities': {
-          'workspace': {
-            'applyEdit': true,
-          },
+          'workspace': {'applyEdit': true},
           'textDocument': {
             'completion': {
               'completionItem': {'snippetSupport': false},
@@ -106,10 +104,7 @@ sealed class LspConfig {
               'tokenTypes': sematicMap['tokenTypes'],
               'tokenModifiers': sematicMap['tokenModifiers'],
               'formats': ['relative'],
-              'requests': {
-                'full': true,
-                'range': true,
-              },
+              'requests': {'full': true, 'range': true},
               'multilineTokenSupport': true,
               'overlappingTokenSupport': false,
               'augmentsSyntaxTokens': true,
@@ -327,11 +322,14 @@ sealed class LspConfig {
     if (response['result'] == null) return {};
     return response['result']?[0] ?? '';
   }
-  
+
   /// Jumps to the location where the data type of a symbol is defined.
   ///
   /// Returns a map with location information, or an empty map if not found.
-  Future<Map<String, dynamic>> getTypeDefinition(int line, int character) async {
+  Future<Map<String, dynamic>> getTypeDefinition(
+    int line,
+    int character,
+  ) async {
     final response = await _sendRequest(
       method: 'textDocument/typeDefinition',
       params: _commonParams(line, character),
@@ -393,10 +391,7 @@ sealed class LspConfig {
   ///
   /// Displays function signatures and highlights the active parameter.
   /// Typically triggered when typing '(' or ','.
-  Future<Map<String, dynamic>> getSignatureHelp(
-    int line,
-    int character,
-  ) async {
+  Future<Map<String, dynamic>> getSignatureHelp(int line, int character) async {
     final response = await _sendRequest(
       method: 'textDocument/signatureHelp',
       params: _commonParams(line, character),
@@ -413,10 +408,7 @@ sealed class LspConfig {
       method: 'textDocument/formatting',
       params: {
         'textDocument': {'uri': Uri.file(filePath).toString()},
-        'options': {
-          'tabSize': 2,
-          'insertSpaces': true,
-        },
+        'options': {'tabSize': 2, 'insertSpaces': true},
       },
     );
 
@@ -442,10 +434,7 @@ sealed class LspConfig {
           'start': {'line': startLine, 'character': startCharacter},
           'end': {'line': endLine, 'character': endCharacter},
         },
-        'options': {
-          'tabSize': 2,
-          'insertSpaces': true,
-        },
+        'options': {'tabSize': 2, 'insertSpaces': true},
       },
     );
 
@@ -464,10 +453,7 @@ sealed class LspConfig {
   ) async {
     final response = await _sendRequest(
       method: 'textDocument/rename',
-      params: {
-        ..._commonParams(line, character),
-        'newName': newName,
-      },
+      params: {..._commonParams(line, character), 'newName': newName},
     );
 
     return response['result'] ?? {};
@@ -476,10 +462,7 @@ sealed class LspConfig {
   /// Checks whether a symbol can be renamed at the given position.
   ///
   /// Returns range and placeholder information, or null if rename is invalid.
-  Future<Map<String, dynamic>?> prepareRename(
-    int line,
-    int character,
-  ) async {
+  Future<Map<String, dynamic>?> prepareRename(int line, int character) async {
     final response = await _sendRequest(
       method: 'textDocument/prepareRename',
       params: _commonParams(line, character),
@@ -520,10 +503,7 @@ sealed class LspConfig {
   Future<void> executeCommand(String command, List<dynamic>? arguments) async {
     await _sendRequest(
       method: 'workspace/executeCommand',
-      params: {
-        'command': command,
-        'arguments': arguments ?? [],
-      },
+      params: {'command': command, 'arguments': arguments ?? []},
     );
   }
 
@@ -561,9 +541,7 @@ sealed class LspConfig {
   }
 
   /// Retrieves incoming calls for a call hierarchy item.
-  Future<List<dynamic>> getIncomingCalls(
-    Map<String, dynamic> item,
-  ) async {
+  Future<List<dynamic>> getIncomingCalls(Map<String, dynamic> item) async {
     final response = await _sendRequest(
       method: 'callHierarchy/incomingCalls',
       params: {'item': item},
@@ -575,9 +553,7 @@ sealed class LspConfig {
   }
 
   /// Retrieves outgoing calls for a call hierarchy item.
-  Future<List<dynamic>> getOutgoingCalls(
-    Map<String, dynamic> item,
-  ) async {
+  Future<List<dynamic>> getOutgoingCalls(Map<String, dynamic> item) async {
     final response = await _sendRequest(
       method: 'callHierarchy/outgoingCalls',
       params: {'item': item},
@@ -604,9 +580,7 @@ sealed class LspConfig {
   }
 
   /// Retrieves supertypes (base classes / interfaces).
-  Future<List<dynamic>> getSupertypes(
-    Map<String, dynamic> item,
-  ) async {
+  Future<List<dynamic>> getSupertypes(Map<String, dynamic> item) async {
     final response = await _sendRequest(
       method: 'typeHierarchy/supertypes',
       params: {'item': item},
@@ -618,9 +592,7 @@ sealed class LspConfig {
   }
 
   /// Retrieves subtypes (derived classes / implementations).
-  Future<List<dynamic>> getSubtypes(
-    Map<String, dynamic> item,
-  ) async {
+  Future<List<dynamic>> getSubtypes(Map<String, dynamic> item) async {
     final response = await _sendRequest(
       method: 'typeHierarchy/subtypes',
       params: {'item': item},
@@ -630,7 +602,6 @@ sealed class LspConfig {
     if (result is! List) return [];
     return result;
   }
-
 
   /// Gets all references to a symbol at the specified position.
   ///
