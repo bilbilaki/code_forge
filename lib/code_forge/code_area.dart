@@ -5673,7 +5673,7 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
         };
 
         _onetap.onTap = () {
-          if(lspActionNotifier.value != null){
+          if (lspActionNotifier.value != null) {
             lspActionNotifier.value == null;
             lspActionOffsetNotifier.value == null;
           }
@@ -5730,7 +5730,7 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
           if (suggestionNotifier.value != null) {
             suggestionNotifier.value = null;
           }
-          if(lspActionNotifier.value != null){
+          if (lspActionNotifier.value != null) {
             lspActionNotifier.value = null;
             lspActionOffsetNotifier.value = null;
           }
