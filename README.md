@@ -772,6 +772,7 @@ CodeForge supports a variety of keyboard shortcuts for efficient editing:
 - **Shift+Tab** — Unindent current line
 
 ### Suggestions & AI Completion
+- **Ctrl+.** — Show available code cctions
 - **Arrow Up/Down** — Navigate through suggestions
 - **Enter/Tab** — Accept current suggestion
 - **Escape** — Close suggestions or hover details

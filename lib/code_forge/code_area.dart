@@ -5673,6 +5673,10 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
         };
 
         _onetap.onTap = () {
+          if(lspActionNotifier.value != null){
+            lspActionNotifier.value == null;
+            lspActionOffsetNotifier.value == null;
+          }
           if (suggestionNotifier.value != null) {
             suggestionNotifier.value = null;
           }
@@ -5725,6 +5729,10 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
         _onetap.onTap = () {
           if (suggestionNotifier.value != null) {
             suggestionNotifier.value = null;
+          }
+          if(lspActionNotifier.value != null){
+            lspActionNotifier.value = null;
+            lspActionOffsetNotifier.value = null;
           }
         };
         controller.selection = TextSelection.collapsed(offset: textOffset);
