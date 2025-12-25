@@ -35,7 +35,7 @@ class CodeForgeController implements DeltaTextInputClient {
   static const _flushDelay = Duration(milliseconds: 300);
   static const _semanticTokenDebounce = Duration(milliseconds: 500);
   final List<VoidCallback> _listeners = [];
-  Timer? _flushTimer, _semanticTokenTimer;
+  Timer? _flushTimer, _semanticTokenTimer, _codeActionTimer;
   String? _cachedText, _bufferLineText, _openedFile;
   String _previousValue = "", _insertedChar = "";
   TextSelection _prevSelection = TextSelection.collapsed(offset: 0);
@@ -50,6 +50,7 @@ class CodeForgeController implements DeltaTextInputClient {
   VoidCallback? _foldAllCallback, _unfoldAllCallback;
   bool _lspReady = false, _isTyping = false;
   List<dynamic> _suggestions = [];
+  StreamSubscription? _lspResponsesSubscription;
 
   CodeForgeController({this.lspConfig}) {
     _listeners.add(() {
@@ -87,6 +88,90 @@ class CodeForgeController implements DeltaTextInputClient {
           await lspConfig!.openDocument(openedFile!);
           _lspReady = true;
           await _fetchSemanticTokensFull();
+          _lspResponsesSubscription = lspConfig!.responses.listen((data) async {
+            try {
+              if (data['method'] == 'workspace/applyEdit') {
+                final Map<String, dynamic>? params = data['params'];
+                if (params != null && params.isNotEmpty) {
+                  if (params.containsKey('edit')) {
+                    await applyWorkspaceEdit(params);
+                  }
+                }
+              }
+
+              if (data['method'] == 'textDocument/publishDiagnostics') {
+                final List<dynamic> rawDiagnostics =
+                    data['params']?['diagnostics'] ?? [];
+                if (rawDiagnostics.isNotEmpty) {
+                  final List<LspErrors> errors = [];
+                  for (final item in rawDiagnostics) {
+                    if (item is! Map<String, dynamic>) continue;
+                    int severity = item['severity'] ?? 0;
+                    if (severity == 1 && lspConfig!.disableError) {
+                      severity = 0;
+                    }
+                    if (severity == 2 && lspConfig!.disableWarning) {
+                      severity = 0;
+                    }
+                    if (severity > 0) {
+                      errors.add(
+                        LspErrors(
+                          severity: severity,
+                          range: item['range'],
+                          message: item['message'] ?? '',
+                        ),
+                      );
+                    }
+                  }
+                  diagnostics.value = errors;
+
+                  _codeActionTimer?.cancel();
+                  _codeActionTimer = Timer(
+                    const Duration(milliseconds: 250),
+                    () async {
+                      if (errors.isEmpty) {
+                        codeActions.value = null;
+                        return;
+                      }
+                      int minStartLine = errors
+                          .map((d) => d.range['start']?['line'] as int? ?? 0)
+                          .reduce((a, b) => a < b ? a : b);
+                      int minStartChar = errors
+                          .map(
+                            (d) => d.range['start']?['character'] as int? ?? 0,
+                          )
+                          .reduce((a, b) => a < b ? a : b);
+                      int maxEndLine = errors
+                          .map((d) => d.range['end']?['line'] as int? ?? 0)
+                          .reduce((a, b) => a > b ? a : b);
+                      int maxEndChar = errors
+                          .map((d) => d.range['end']?['character'] as int? ?? 0)
+                          .reduce((a, b) => a > b ? a : b);
+
+                      try {
+                        final actions = await lspConfig!.getCodeActions(
+                          filePath: openedFile!,
+                          startLine: minStartLine,
+                          startCharacter: minStartChar,
+                          endLine: maxEndLine,
+                          endCharacter: maxEndChar,
+                          diagnostics: rawDiagnostics
+                              .cast<Map<String, dynamic>>(),
+                        );
+                        codeActions.value = actions;
+                      } catch (e) {
+                        debugPrint('Error fetching code actions: $e');
+                      }
+                    },
+                  );
+                } else {
+                  diagnostics.value = [];
+                }
+              }
+            } catch (e, st) {
+              debugPrint('Error handling LSP response: $e\n$st');
+            }
+          });
         } catch (e) {
           debugPrint('Error initializing LSP: $e');
         } finally {
@@ -171,6 +256,8 @@ class CodeForgeController implements DeltaTextInputClient {
   final ValueNotifier<(List<LspSemanticToken>?, int)> semanticTokens =
       ValueNotifier((null, 0));
   final ValueNotifier<List<dynamic>?> suggestions = ValueNotifier(null);
+  final ValueNotifier<List<LspErrors>> diagnostics = ValueNotifier([]);
+  final ValueNotifier<List<dynamic>?> codeActions = ValueNotifier(null);
 
   /// Configuration for Language Server Protocol integration.
   ///
@@ -1218,8 +1305,162 @@ class CodeForgeController implements DeltaTextInputClient {
   void dispose() {
     _semanticTokenTimer?.cancel();
     _flushTimer?.cancel();
+    _codeActionTimer?.cancel();
+    _lspResponsesSubscription?.cancel();
     _listeners.clear();
     connection?.close();
+  }
+
+  /// Applies a workspace edit or code action payload coming from the LSP.
+  ///
+  /// The method understands several forms: a map with an `edit` containing
+  /// `changes`, `documentChanges`, a raw list of edits, or a command. It will
+  /// apply text edits to the currently opened file and update the LSP server
+  /// document afterwards.
+  Future<void> applyWorkspaceEdit(dynamic action) async {
+    if (openedFile == null) return;
+    final fileUri = Uri.file(openedFile!).toString();
+
+    if (action is Map && action.containsKey('command')) {
+      final String command = action['command'];
+      final List args = action['arguments'] ?? [];
+      await lspConfig?.executeCommand(command, args);
+      return;
+    } else if (action is Map &&
+        action.containsKey('edit') &&
+        (action['edit'] as Map).containsKey('changes')) {
+      final Map changes = action['edit']['changes'] as Map;
+      if (changes.containsKey(fileUri)) {
+        final List edits = List.from(changes[fileUri] as List);
+        final converted = <Map<String, dynamic>>[];
+        for (final e in edits) {
+          try {
+            final start = e['range']?['start'];
+            final end = e['range']?['end'];
+            if (start == null || end == null) continue;
+            final startOffset =
+                getLineStartOffset(start['line'] as int) +
+                (start['character'] as int);
+            final endOffset =
+                getLineStartOffset(end['line'] as int) +
+                (end['character'] as int);
+            final newText = e['newText'] as String? ?? '';
+            converted.add({
+              'start': startOffset,
+              'end': endOffset,
+              'newText': newText,
+            });
+          } catch (_) {
+            continue;
+          }
+        }
+        converted.sort(
+          (a, b) => (b['start'] as int).compareTo(a['start'] as int),
+        );
+        for (final ce in converted) {
+          replaceRange(
+            ce['start'] as int,
+            ce['end'] as int,
+            ce['newText'] as String,
+            preserveOldCursor: true,
+          );
+        }
+        if (lspConfig != null) {
+          await lspConfig!.updateDocument(openedFile!, text);
+        }
+      }
+      return;
+    } else if (action is Map &&
+        action.containsKey('documentChanges') &&
+        action['documentChanges'] is List) {
+      final List docChanges = List.from(action['documentChanges'] as List);
+      for (final dc in docChanges) {
+        if (dc is Map) {
+          final td = dc['textDocument'];
+          final uri = td != null ? td['uri'] as String? : null;
+          if (uri == fileUri && dc.containsKey('edits')) {
+            final List edits = List.from(dc['edits'] as List);
+            final converted = <Map<String, dynamic>>[];
+            for (final e in edits) {
+              try {
+                final start = e['range']?['start'];
+                final end = e['range']?['end'];
+                if (start == null || end == null) continue;
+                final int startOffset =
+                    getLineStartOffset(start['line'] as int) +
+                    (start['character'] as int);
+                final int endOffset =
+                    getLineStartOffset(end['line'] as int) +
+                    (end['character'] as int);
+                final String newText = e['newText'] as String? ?? '';
+                converted.add({
+                  'start': startOffset,
+                  'end': endOffset,
+                  'newText': newText,
+                });
+              } catch (_) {
+                continue;
+              }
+            }
+            converted.sort(
+              (a, b) => (b['start'] as int).compareTo(a['start'] as int),
+            );
+            for (final ce in converted) {
+              replaceRange(
+                ce['start'] as int,
+                ce['end'] as int,
+                ce['newText'] as String,
+                preserveOldCursor: true,
+              );
+            }
+            if (lspConfig != null) {
+              await lspConfig!.updateDocument(openedFile!, text);
+            }
+          }
+        }
+      }
+      return;
+    } else if (action is List) {
+      final converted = <Map<String, dynamic>>[];
+      try {
+        for (Map<String, dynamic> item in action) {
+          if (!(item.containsKey('newText') && item.containsKey('range'))) {
+            return;
+          }
+          final start = item['range']?['start'];
+          final end = item['range']?['end'];
+          if (start == null || end == null) return;
+          final startOffset =
+              getLineStartOffset(start['line'] as int) +
+              (start['character'] as int);
+          final endOffset =
+              getLineStartOffset(end['line'] as int) +
+              (end['character'] as int);
+          final newText = item['newText'] as String? ?? '';
+          converted.add({
+            'start': startOffset,
+            'end': endOffset,
+            'newText': newText,
+          });
+        }
+      } catch (_) {
+        return;
+      }
+      converted.sort(
+        (a, b) => (b['start'] as int).compareTo(a['start'] as int),
+      );
+      for (final ce in converted) {
+        replaceRange(
+          ce['start'] as int,
+          ce['end'] as int,
+          ce['newText'] as String,
+          preserveOldCursor: true,
+        );
+      }
+      if (lspConfig != null) {
+        await lspConfig!.updateDocument(openedFile!, text);
+      }
+    }
   }
 
   bool _isAlpha(String s) {

@@ -135,3 +135,7 @@ This release establishes **CodeForge** as a powerful, production-ready code edit
 
 ## 1.5.0
 - FIX: Backspace, delete, undo-redo, etc works on read-only mode.
+
+## 2.0.0
+- REFACTOR: Moved the LSP configuration and logic from the `CodeForge` to the `CodeForgeController`.
+- FIX: Code action persists on mobile.

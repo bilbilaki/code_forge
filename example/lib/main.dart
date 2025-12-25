@@ -55,7 +55,6 @@ class _MyAppState extends State<MyApp> {
                 /* aiCompletion: AiCompletion(
                   model: Gemini(apiKey: "YOUR API KEY"),
                 ), */
-                // lspConfig: snapshot.data,
                 filePath: absFilePath,
               );
             },

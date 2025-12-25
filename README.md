@@ -142,7 +142,7 @@ Add CodeForge to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  code_forge: ^1.5.0
+  code_forge: ^2.0.0
 ```
 
 Then run:
@@ -237,7 +237,7 @@ cd /Downloads/lsp-ws-proxy_linux # Navigate to the directory where lsp-ws-proxy 
 ```
 
 #### Example:
-create a `LspSocketConfig` object and pass it to the `CodeForge` widget.
+create a `LspSocketConfig` object and pass it to the `CodeForgeController` widget.
 
 ```dart
 final lspConfig = LspSocketConfig(
@@ -246,14 +246,17 @@ final lspConfig = LspSocketConfig(
     serverUrl: "ws://localhost:5656"
 ),
 ```
-Then pass the `lspConfig` instance to the `CodeForge` widget:
+Then pass the `lspConfig` instance to the `CodeForgeController` widget:
 
 ```dart
+final _controller = CodeForgeController(
+  lspConfig: lspConfig // Pass the LspConfig here.
+)
+
 CodeForge(
-    controller: controller,
+    controller: _controller, // Pass the controller here.
     theme: anOldHopeTheme,
     filePath: "/home/athul/Projects/lsp/example.py"
-    lspConfig: lspConfig, // Pass the LSP config here
 ),
 ```
 </details>
@@ -293,7 +296,7 @@ Future<LspConfig?> _initLsp() async {
     }
   }
   ```
-  Then use a `FutureBuilder` to initialize the LSP configuration and pass it to the `CodeForge` widget:
+  Then use a `FutureBuilder` to initialize the LSP configuration and pass it to the `CodeForgeController` widget:
 ```dart
   @override
   Widget build(BuildContext context) {
@@ -301,17 +304,18 @@ Future<LspConfig?> _initLsp() async {
       home: Scaffold(
         body: SafeArea(
           child: FutureBuilder(
-            future: _initLsp(), // Call the async method to get the LSP config
+            future: _initLsp(), // Call the async method to get the LSP config.
             builder: (context, snapshot) {
               if(snapshot.connectionState == ConnectionState.waiting) {
                 return Center(child: CircularProgressIndicator());
               }
               return CodeForge(
                 editorTheme: anOldHopeTheme,
-                controller: controller,
+                controller: CodeForgeController(
+                  lspConfig: snapshot.data // Pass the config here.
+                ),
                 filePath: '/home/athul/Projects/lsp/example.py',
                 textStyle: TextStyle(fontSize: 15, fontFamily: 'monospace'),
-                lspConfig: snapshot.data, // Pass the LSP config here
               );
             }
           ),
@@ -351,8 +355,11 @@ Future<LspConfig> setupDartLsp() async {
               return CodeForge(
                 language: langDart,
                 textStyle: GoogleFonts.jetBrainsMono(),
-                lspConfig: snapshot.data,
+                controller: CodeForgeController(
+                  lspConfig: snapshot.data
+                ),
                 filePath: '/path/to/your/file.dart', // Mandatory field
+              )
             },
           ),
         ),

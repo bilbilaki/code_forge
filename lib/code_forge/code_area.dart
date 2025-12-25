@@ -222,10 +222,10 @@ class _CodeForgeState extends State<CodeForge>
   late final ValueNotifier<Offset?> _aiOffsetNotifier;
   late final ValueNotifier<Offset> _contextMenuOffsetNotifier;
   late final ValueNotifier<bool> _selectionActiveNotifier, _isHoveringPopup;
+  late final ValueNotifier<List<dynamic>?> _lspActionNotifier;
   late final UndoRedoController _undoRedoController;
   late final String? _filePath;
   final ValueNotifier<Offset> _offsetNotifier = ValueNotifier(Offset(0, 0));
-  final ValueNotifier<List<dynamic>?> _lspActionNotifier = ValueNotifier(null);
   final ValueNotifier<Offset?> _lspActionOffsetNotifier = ValueNotifier(null);
   final Map<String, String> _cachedResponse = {};
   final _isMobile = Platform.isAndroid || Platform.isIOS;
@@ -240,7 +240,7 @@ class _CodeForgeState extends State<CodeForge>
   int _semanticTokensVersion = 0;
   int _sugSelIndex = 0, _actionSelIndex = 0;
   String? _selectedSuggestionMd;
-  Timer? _hoverTimer, _aiDebounceTimer, _codeActionTimer;
+  Timer? _hoverTimer, _aiDebounceTimer;
 
   @override
   void initState() {
@@ -253,8 +253,9 @@ class _CodeForgeState extends State<CodeForge>
     _editorTheme = widget.editorTheme ?? vs2015Theme;
     _language = widget.language ?? langDart;
     _suggestionNotifier = _controller.suggestions;
+    _diagnosticsNotifier = _controller.diagnostics;
+    _lspActionNotifier = _controller.codeActions;
     _hoverNotifier = ValueNotifier(null);
-    _diagnosticsNotifier = ValueNotifier<List<LspErrors>>([]);
     _aiNotifier = ValueNotifier(null);
     _aiOffsetNotifier = ValueNotifier(null);
     _contextMenuOffsetNotifier = ValueNotifier(const Offset(-1, -1));
@@ -391,86 +392,6 @@ class _CodeForgeState extends State<CodeForge>
       } else if (_filePath.isNotEmpty) {
         if (_controller.openedFile != _filePath) {
           _controller.openedFile = _filePath;
-        }
-
-        if (_controller.lspConfig != null) {
-          _lspResponsesSubscription = _controller.lspConfig!.responses.listen((
-            data,
-          ) async {
-            if (data['method'] == 'workspace/applyEdit') {
-              final Map<String, dynamic>? params = data['params'];
-              if (params != null && params.isNotEmpty) {
-                try {
-                  if (params.containsKey('edit')) {
-                    await _acceptActions(params);
-                  }
-                } catch (e, st) {
-                  debugPrint('Error applying workspace/applyEdit: $e\n$st');
-                }
-              }
-            }
-            if (data['method'] == 'textDocument/publishDiagnostics') {
-              final List<dynamic> diagnostics = data['params']['diagnostics'];
-              if (diagnostics.isNotEmpty) {
-                final List<LspErrors> errors = [];
-                for (final Map<String, dynamic> item in diagnostics) {
-                  int severity = item['severity'] ?? 0;
-                  if (severity == 1 && _controller.lspConfig!.disableError) {
-                    severity = 0;
-                  }
-                  if (severity == 2 && _controller.lspConfig!.disableWarning) {
-                    severity = 0;
-                  }
-                  if (severity > 0) {
-                    errors.add(
-                      LspErrors(
-                        severity: severity,
-                        range: item['range'],
-                        message: item['message'] ?? '',
-                      ),
-                    );
-                  }
-                }
-                _diagnosticsNotifier.value = errors;
-                _codeActionTimer?.cancel();
-                _codeActionTimer = Timer(
-                  const Duration(milliseconds: 250),
-                  () async {
-                    if (!mounted || _controller.lspConfig == null) return;
-                    if (errors.isEmpty) {
-                      _lspActionNotifier.value = null;
-                      return;
-                    }
-                    int minStartLine = errors
-                        .map((d) => d.range['start']?['line'] as int? ?? 0)
-                        .reduce(min);
-                    int minStartChar = errors
-                        .map((d) => d.range['start']?['character'] as int? ?? 0)
-                        .reduce(min);
-                    int maxEndLine = errors
-                        .map((d) => d.range['end']?['line'] as int? ?? 0)
-                        .reduce(max);
-                    int maxEndChar = errors
-                        .map((d) => d.range['end']?['character'] as int? ?? 0)
-                        .reduce(max);
-
-                    final actions = await _controller.lspConfig!.getCodeActions(
-                      filePath: _filePath,
-                      startLine: minStartLine,
-                      startCharacter: minStartChar,
-                      endLine: maxEndLine,
-                      endCharacter: maxEndChar,
-                      diagnostics: diagnostics.cast<Map<String, dynamic>>(),
-                    );
-                    _lspActionNotifier.value = actions;
-                    _actionSelIndex = 0;
-                  },
-                );
-              } else {
-                _diagnosticsNotifier.value = [];
-              }
-            }
-          });
         }
       }
     } else if (widget.initialText != null && widget.initialText!.isNotEmpty) {
@@ -1291,7 +1212,9 @@ class _CodeForgeState extends State<CodeForge>
                                           case LogicalKeyboardKey.tab:
                                             _acceptSuggestion();
                                             if (_extraText.isNotEmpty) {
-                                              _acceptActions(_extraText);
+                                              _controller.applyWorkspaceEdit(
+                                                _extraText,
+                                              );
                                             }
                                             return KeyEventResult.handled;
                                           case LogicalKeyboardKey.escape:
@@ -1336,10 +1259,11 @@ class _CodeForgeState extends State<CodeForge>
                                           case LogicalKeyboardKey.enter:
                                           case LogicalKeyboardKey.tab:
                                             (() async {
-                                              await _acceptActions(
-                                                _lspActionNotifier
-                                                    .value![_actionSelIndex],
-                                              );
+                                              await _controller
+                                                  .applyWorkspaceEdit(
+                                                    _lspActionNotifier
+                                                        .value![_actionSelIndex],
+                                                  );
                                             })();
                                             _lspActionNotifier.value = null;
                                             _lspActionOffsetNotifier.value =
@@ -1670,7 +1594,11 @@ class _CodeForgeState extends State<CodeForge>
             ValueListenableBuilder(
               valueListenable: _offsetNotifier,
               builder: (context, offset, child) {
-                if (offset.dy < 0 || offset.dx < 0) return SizedBox.shrink();
+                if (offset.dy < 0 ||
+                    offset.dx < 0 ||
+                    !widget.enableSuggestions) {
+                  return SizedBox.shrink();
+                }
                 return ValueListenableBuilder(
                   valueListenable: _suggestionNotifier,
                   builder: (_, sugg, child) {
@@ -1817,7 +1745,9 @@ class _CodeForgeState extends State<CodeForge>
                                                 replaceTypedChar: true,
                                               );
                                               if (_extraText.isNotEmpty) {
-                                                _acceptActions(_extraText);
+                                                _controller.applyWorkspaceEdit(
+                                                  _extraText,
+                                                );
                                               }
                                               _suggestionNotifier.value = null;
                                             });
@@ -1966,7 +1896,9 @@ class _CodeForgeState extends State<CodeForge>
             ValueListenableBuilder(
               valueListenable: _hoverNotifier,
               builder: (_, hov, c) {
-                if (hov == null || _controller.lspConfig == null) {
+                if (hov == null ||
+                    _controller.lspConfig == null ||
+                    !widget.enableSuggestions) {
                   return SizedBox.shrink();
                 }
                 final Offset position = hov[0];
@@ -2319,7 +2251,8 @@ class _CodeForgeState extends State<CodeForge>
               builder: (_, offset, child) {
                 if (offset == null ||
                     _lspActionNotifier.value == null ||
-                    _controller.lspConfig == null) {
+                    _controller.lspConfig == null ||
+                    !widget.enableSuggestions) {
                   return SizedBox.shrink();
                 }
 
@@ -2360,7 +2293,9 @@ class _CodeForgeState extends State<CodeForge>
                                 onTap: () {
                                   try {
                                     (() async {
-                                      await _acceptActions(actionData[indx]);
+                                      await _controller.applyWorkspaceEdit(
+                                        actionData[indx],
+                                      );
                                     })();
                                   } catch (e, st) {
                                     debugPrint('Code action failed: $e\n$st');
@@ -2418,162 +2353,6 @@ class _CodeForgeState extends State<CodeForge>
         );
       },
     );
-  }
-
-  Future<void> _acceptActions(dynamic action) async {
-    final fileUri = Uri.file(widget.filePath!).toString();
-    if (action is Map && action.containsKey('command')) {
-      final String command = action['command'];
-      final List args = action['arguments'];
-      await _controller.lspConfig!.executeCommand(command, args);
-      return;
-    } else if (action is Map &&
-        action.containsKey('edit') &&
-        (action['edit'] as Map).containsKey('changes')) {
-      final Map changes = action['edit']['changes'] as Map;
-      if (changes.containsKey(fileUri)) {
-        final List edits = List.from(changes[fileUri] as List);
-
-        final converted = <Map<String, dynamic>>[];
-        for (final e in edits) {
-          try {
-            final start = e['range']?['start'];
-            final end = e['range']?['end'];
-            if (start == null || end == null) continue;
-            final startOffset =
-                _controller.getLineStartOffset(start['line'] as int) +
-                (start['character'] as int);
-            final endOffset =
-                _controller.getLineStartOffset(end['line'] as int) +
-                (end['character'] as int);
-            final newText = e['newText'] as String? ?? '';
-            converted.add({
-              'start': startOffset,
-              'end': endOffset,
-              'newText': newText,
-            });
-          } catch (_) {
-            continue;
-          }
-        }
-
-        converted.sort(
-          (a, b) => (b['start'] as int).compareTo(a['start'] as int),
-        );
-        for (final ce in converted) {
-          _controller.replaceRange(
-            ce['start'] as int,
-            ce['end'] as int,
-            ce['newText'] as String,
-            preserveOldCursor: true,
-          );
-        }
-
-        if (_controller.lspConfig != null) {
-          await _controller.lspConfig!.updateDocument(
-            _filePath!,
-            _controller.text,
-          );
-        }
-      }
-      return;
-    } else if (action is Map &&
-        action.containsKey('documentChanges') &&
-        action['documentChanges'] is List) {
-      final List docChanges = List.from(action['documentChanges'] as List);
-      for (final dc in docChanges) {
-        if (dc is Map) {
-          final td = dc['textDocument'];
-          final uri = td != null ? td['uri'] as String? : null;
-          if (uri == fileUri && dc.containsKey('edits')) {
-            final List edits = List.from(dc['edits'] as List);
-            final converted = <Map<String, dynamic>>[];
-            for (final e in edits) {
-              try {
-                final start = e['range']?['start'];
-                final end = e['range']?['end'];
-                if (start == null || end == null) continue;
-                final int startOffset =
-                    _controller.getLineStartOffset(start['line'] as int) +
-                    (start['character'] as int);
-                final int endOffset =
-                    _controller.getLineStartOffset(end['line'] as int) +
-                    (end['character'] as int);
-                final String newText = e['newText'] as String? ?? '';
-                converted.add({
-                  'start': startOffset,
-                  'end': endOffset,
-                  'newText': newText,
-                });
-              } catch (_) {
-                continue;
-              }
-            }
-            converted.sort(
-              (a, b) => (b['start'] as int).compareTo(a['start'] as int),
-            );
-            for (final ce in converted) {
-              _controller.replaceRange(
-                ce['start'] as int,
-                ce['end'] as int,
-                ce['newText'] as String,
-                preserveOldCursor: true,
-              );
-            }
-            if (_controller.lspConfig != null) {
-              await _controller.lspConfig!.updateDocument(
-                _filePath!,
-                _controller.text,
-              );
-            }
-          }
-        }
-      }
-      return;
-    } else if (action is List) {
-      final converted = <Map<String, dynamic>>[];
-      try {
-        for (Map<String, dynamic> item in action) {
-          if (!(item.containsKey('newText') && item.containsKey('range'))) {
-            return;
-          }
-          final start = item['range']?['start'];
-          final end = item['range']?['end'];
-          if (start == null || end == null) return;
-          final startOffset =
-              _controller.getLineStartOffset(start['line'] as int) +
-              (start['character'] as int);
-          final endOffset =
-              _controller.getLineStartOffset(end['line'] as int) +
-              (end['character'] as int);
-          final newText = item['newText'] as String? ?? '';
-          converted.add({
-            'start': startOffset,
-            'end': endOffset,
-            'newText': newText,
-          });
-        }
-      } catch (_) {
-        return;
-      }
-      converted.sort(
-        (a, b) => (b['start'] as int).compareTo(a['start'] as int),
-      );
-      for (final ce in converted) {
-        _controller.replaceRange(
-          ce['start'] as int,
-          ce['end'] as int,
-          ce['newText'] as String,
-          preserveOldCursor: true,
-        );
-      }
-      if (_controller.lspConfig != null) {
-        await _controller.lspConfig!.updateDocument(
-          _filePath!,
-          _controller.text,
-        );
-      }
-    }
   }
 
   void _acceptSuggestion() {
@@ -5799,7 +5578,8 @@ class _CodeFieldRenderer extends RenderBox implements MouseTrackerAnnotation {
 
         _onetap.onTap = () {
           if (lspActionNotifier.value != null) {
-            lspActionOffsetNotifier.value == null;
+            lspActionNotifier.value = null;
+            lspActionOffsetNotifier.value = null;
           }
           if (suggestionNotifier.value != null) {
             suggestionNotifier.value = null;
