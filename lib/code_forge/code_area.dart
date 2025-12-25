@@ -389,7 +389,7 @@ class _CodeForgeState extends State<CodeForge>
         throw ArgumentError(
           'Cannot provide both filePath and initialText to CodeForge.',
         );
-      } else if (_filePath!.isNotEmpty??"") {
+      } else if (_filePath!.isNotEmpty) {
         if (_controller.openedFile != _filePath) {
           _controller.openedFile = _filePath;
         }
